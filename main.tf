@@ -24,7 +24,6 @@ resource "aws_eip" "nat" {
   }
 }
 
-
 resource "aws_nat_gateway" "nat" {
   allocation_id = aws_eip.nat.id
   subnet_id     = aws_subnet.public_1.id
@@ -133,6 +132,42 @@ resource "aws_vpc_endpoint" "ssm" {
   }
 }
 
+resource "aws_iam_role" "ssm" {
+  name = "ec2-ssm-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      },
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ssm_managed" {
+  role       = aws_iam_role.ssm.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_instance_profile" "ssm" {
+  name = "ec2-ssm-instance-profile"
+  role = aws_iam_role.ssm.name
+}
+
+resource "aws_instance" "ssm_host" {
+  ami                         = var.ami_id
+  instance_type               = var.instance_type
+  subnet_id                   = aws_subnet.public_1.id
+  associate_public_ip_address = true
+  vpc_security_group_ids      = [var.ec2_sg_id]
+  iam_instance_profile        = aws_iam_instance_profile.ssm.name
+  tags = {
+    Name = "ssm-host"
+  }
+}
 
 resource "aws_db_subnet_group" "mariadb" {
   name       = "mariadb-subnet-group"
@@ -189,11 +224,12 @@ resource "aws_cloudfront_distribution" "cdn" {
     origin_id                = "s3-origin"
     origin_access_control_id = aws_cloudfront_origin_access_control.oac.id
   }
-restrictions {
-  geo_restriction {
-    restriction_type = "none"
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
   }
-}
 
   enabled             = true
   default_root_object = "index.html"
