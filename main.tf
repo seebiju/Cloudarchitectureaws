@@ -152,10 +152,7 @@ resource "aws_route_table" "public" {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.igw.id
   }
-  route {
-    cidr_block = "192.168.0.0/16"
-    gateway_id = "local"
-  }
+
   tags = {
     Name = "public-rt"
   }
@@ -177,10 +174,7 @@ resource "aws_route_table" "private" {
     cidr_block     = "0.0.0.0/0"
     nat_gateway_id = aws_nat_gateway.nat.id
   }
-  route {
-    cidr_block = "192.168.0.0/16"
-    gateway_id = "local"
-  }
+
   tags = {
     Name = "private-rt"
   }
@@ -272,7 +266,7 @@ resource "aws_db_instance" "mariadb_replica" {
   identifier             = "mariadb-replica"
   instance_class         = var.db_instance_class
   engine                 = "mariadb"
-  replicate_source_db    = aws_db_instance.mariadb_master.id
+  replicate_source_db    = aws_db_instance.mariadb_master.arn
   db_subnet_group_name   = aws_db_subnet_group.mariadb.name
   vpc_security_group_ids = [aws_security_group.db_sg.id]
   skip_final_snapshot    = true
