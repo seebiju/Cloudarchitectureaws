@@ -191,11 +191,6 @@ resource "aws_cloudfront_origin_access_control" "oac" {
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
 }
-restrictions {
-  geo_restriction {
-    restriction_type = "none"
-  }
-}
 
 resource "aws_cloudfront_distribution" "cdn" {
   origin {
@@ -203,6 +198,11 @@ resource "aws_cloudfront_distribution" "cdn" {
     origin_id                = "s3-origin"
     origin_access_control_id = aws_cloudfront_origin_access_control.oac.id
   }
+restrictions {
+  geo_restriction {
+    restriction_type = "none"
+  }
+}
 
   enabled             = true
   default_root_object = "index.html"
