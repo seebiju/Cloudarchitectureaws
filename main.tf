@@ -1,4 +1,4 @@
-# Cloudawsinfra
+# Cloudawsinfrastructure
 provider "aws" {
   region = var.aws_region
 }
