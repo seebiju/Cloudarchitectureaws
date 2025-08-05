@@ -274,7 +274,6 @@ resource "aws_db_instance" "mariadb_replica" {
   skip_final_snapshot    = true
   publicly_accessible    = false
   availability_zone      = "${var.aws_region}a"
-  backup_retention_period = 1
   tags = {
     Name = "mariadb-replica"
   }
