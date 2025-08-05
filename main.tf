@@ -19,8 +19,11 @@ resource "aws_internet_gateway" "igw" {
 }
 
 resource "aws_eip" "nat" {
-  vpc = true
+  tags = {
+    Name = "nat-eip"
+  }
 }
+
 
 resource "aws_nat_gateway" "nat" {
   allocation_id = aws_eip.nat.id
@@ -118,15 +121,18 @@ resource "aws_route_table_association" "private_2" {
   route_table_id = aws_route_table.private.id
 }
 
-resource "aws_instance" "ssm_host" {
-  ami                         = var.ami_id
-  instance_type               = var.instance_type
-  subnet_id                   = aws_subnet.public_1.id
-  associate_public_ip_address = true
+resource "aws_vpc_endpoint" "ssm" {
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.${var.aws_region}.ssm"
+  subnet_ids          = [aws_subnet.private_1.id, aws_subnet.private_2.id]
+  vpc_endpoint_type   = "Interface"
+  security_group_ids  = [var.ssm_sg_id]
+  private_dns_enabled = true
   tags = {
-    Name = "ssm-host"
+    Name = "ssm-vpc-endpoint"
   }
 }
+
 
 resource "aws_ssm_vpc_endpoint" "ssm" {
   vpc_id             = aws_vpc.main.id
@@ -184,6 +190,11 @@ resource "aws_cloudfront_origin_access_control" "oac" {
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
+}
+restrictions {
+  geo_restriction {
+    restriction_type = "none"
+  }
 }
 
 resource "aws_cloudfront_distribution" "cdn" {
