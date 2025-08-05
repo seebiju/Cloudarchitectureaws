@@ -5,7 +5,7 @@ public_subnet_2_cidr  = "172.16.2.0/24"
 private_subnet_1_cidr = "172.16.3.0/24"
 private_subnet_2_cidr = "172.16.4.0/24"
 
-ami_id                = "ami-0123456789abcdef0" # replace with actual AMI
+ami_id                = "ami-0a80ee51a7ebf1a5f" # replace with actual AMI
 instance_type         = "t3.micro"
 
 db_instance_class     = "db.t3.micro"
