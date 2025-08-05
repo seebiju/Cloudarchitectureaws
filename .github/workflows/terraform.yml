@@ -89,3 +89,6 @@ jobs:
       - name: Terraform Apply (Auto-approved on Push to Main)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve tfplan
+      - name: Terraform Format
+        run: terraform fmt -recursive
+
