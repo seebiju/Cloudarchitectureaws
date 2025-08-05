@@ -12,8 +12,6 @@ db_instance_class     = "db.t3.micro"
 db_username           = "admin"
 db_password           = "your_secure_password"
 
-db_sg_id              = "sg-0dbexample123456789"
-ec2_sg_id             = "sg-0ec2example123456789"
-ssm_sg_id             = "sg-0ssmexample123456789"
+
 
 s3_bucket_name        = "my-cloudfront-origin-bucket-example"
