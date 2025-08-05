@@ -82,6 +82,9 @@ jobs:
 
       - name: Terraform Validate
         run: terraform validate
+        
+      - name: Terraform Taint RDS Master (Force Recreate)
+        run: terraform taint aws_db_instance.mariadb_master
 
       - name: Terraform Plan
         run: terraform plan -input=false -out=tfplan
