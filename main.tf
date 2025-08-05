@@ -257,6 +257,8 @@ resource "aws_db_instance" "mariadb_master" {
   multi_az               = false
   publicly_accessible    = false
   availability_zone      = "${var.aws_region}b"
+  backup_retention_period = 1
+
   tags = {
     Name = "mariadb-master"
   }
