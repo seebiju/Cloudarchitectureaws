@@ -57,21 +57,6 @@ variable "db_password" {
   sensitive   = true
 }
 
-variable "db_sg_id" {
-  type        = string
-  description = "Security group ID for RDS"
-}
-
-variable "ec2_sg_id" {
-  type        = string
-  description = "Security group ID for EC2"
-}
-
-variable "ssm_sg_id" {
-  type        = string
-  description = "Security group ID for SSM VPC endpoint"
-}
-
 variable "s3_bucket_name" {
   description = "S3 bucket name for CloudFront origin"
   type        = string
