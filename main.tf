@@ -10,6 +10,71 @@ resource "aws_vpc" "main" {
     Name = "main-vpc"
   }
 }
+# Default Security Groups
+
+resource "aws_security_group" "ec2_sg" {
+  name        = "ec2-sg"
+  description = "Security group for EC2 instances"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description = "Allow HTTPS for SSM"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "ec2-sg"
+  }
+}
+
+resource "aws_security_group" "db_sg" {
+  name        = "db-sg"
+  description = "Security group for MariaDB"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description     = "Allow MySQL from EC2 SG"
+    from_port       = 3306
+    to_port         = 3306
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ec2_sg.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "db-sg"
+  }
+}
+
+resource "aws_security_group" "ssm_sg" {
+  name        = "ssm-endpoint-sg"
+  description = "Security group for VPC Interface Endpoint (SSM)"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description     = "Allow HTTPS from EC2 SG"
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ec2_sg.id]
+  }
+
 
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
