@@ -201,7 +201,7 @@ resource "aws_vpc_endpoint" "ssm" {
   service_name        = "com.amazonaws.${var.aws_region}.ssm"
   subnet_ids          = [aws_subnet.private_1.id, aws_subnet.private_2.id]
   vpc_endpoint_type   = "Interface"
-  security_group_ids  = [var.ssm_sg_id]
+  security_group_ids  = [aws_security_group.ssm_sg.id]
   private_dns_enabled = true
   tags = {
     Name = "ssm-vpc-endpoint"
@@ -238,7 +238,7 @@ resource "aws_instance" "ssm_host" {
   instance_type               = var.instance_type
   subnet_id                   = aws_subnet.public_1.id
   associate_public_ip_address = true
-  vpc_security_group_ids      = [var.ec2_sg_id]
+  vpc_security_group_ids      = [aws_security_group.ec2_sg.id]
   iam_instance_profile        = aws_iam_instance_profile.ssm.name
   tags = {
     Name = "ssm-host"
@@ -258,7 +258,7 @@ resource "aws_db_instance" "mariadb_master" {
   username               = var.db_username
   password               = var.db_password
   db_subnet_group_name   = aws_db_subnet_group.mariadb.name
-  vpc_security_group_ids = [var.db_sg_id]
+  vpc_security_group_ids = [aws_security_group.db_sg.id]
   skip_final_snapshot    = true
   multi_az               = false
   publicly_accessible    = false
@@ -274,7 +274,7 @@ resource "aws_db_instance" "mariadb_replica" {
   engine                 = "mariadb"
   replicate_source_db    = aws_db_instance.mariadb_master.id
   db_subnet_group_name   = aws_db_subnet_group.mariadb.name
-  vpc_security_group_ids = [var.db_sg_id]
+  vpc_security_group_ids = [aws_security_group.db_sg.id]
   skip_final_snapshot    = true
   publicly_accessible    = false
   availability_zone      = "${var.aws_region}a"
@@ -359,7 +359,7 @@ resource "aws_launch_template" "ec2_template" {
   name_prefix            = "ec2-template-"
   image_id               = var.ami_id
   instance_type          = var.instance_type
-  vpc_security_group_ids = [var.ec2_sg_id]
+  vpc_security_group_ids = [aws_security_group.ec2_sg.id]
 
   block_device_mappings {
     device_name = "/dev/xvda"
