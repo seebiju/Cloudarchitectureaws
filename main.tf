@@ -133,18 +133,6 @@ resource "aws_vpc_endpoint" "ssm" {
   }
 }
 
-resource "aws_vpc_endpoint" "ssm" {
-  vpc_id              = aws_vpc.main.id
-  service_name        = "com.amazonaws.${var.aws_region}.ssm"
-  subnet_ids          = [aws_subnet.private_1.id, aws_subnet.private_2.id]
-  vpc_endpoint_type   = "Interface"
-  security_group_ids  = [var.ssm_sg_id]
-  private_dns_enabled = true
-  tags = {
-    Name = "ssm-vpc-endpoint"
-  }
-}
-
 
 resource "aws_db_subnet_group" "mariadb" {
   name       = "mariadb-subnet-group"
