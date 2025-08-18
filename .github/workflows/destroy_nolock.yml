@@ -1,0 +1,98 @@
+name: Terraform Destroy (No Lock)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "DESTROY" to confirm tearing down this environment (lock disabled)'
+        required: true
+        type: string
+      directory:
+        description: 'Terraform working directory relative to repo root (e.g., ".", "infra")'
+        required: false
+        default: '.'
+        type: string
+      var_file:
+        description: 'Optional Terraform var-file (e.g., env/prod.tfvars)'
+        required: false
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: terraform-destroy-nolock-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  destroy:
+    name: Terraform Destroy (Lock Disabled)
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.confirm == 'DESTROY' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Resolve TF_DIR and validate
+        id: resolve
+        shell: bash
+        run: |
+          TF_DIR="${{ github.event.inputs.directory }}"
+          if [ -z "$TF_DIR" ] || [ "$TF_DIR" = "." ]; then
+            TF_DIR="$GITHUB_WORKSPACE"
+          else
+            TF_DIR="$GITHUB_WORKSPACE/$TF_DIR"
+          fi
+          echo "TF_DIR=$TF_DIR" >> "$GITHUB_OUTPUT"
+          echo "Using TF_DIR=$TF_DIR"
+          if [ ! -d "$TF_DIR" ]; then
+            echo "::error ::Directory does not exist: $TF_DIR"
+            exit 1
+          fi
+          echo "Workspace listing:"; ls -la "$GITHUB_WORKSPACE"
+          echo "TF dir listing:"; ls -la "$TF_DIR"
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.2
+
+      - name: Terraform Init
+        working-directory: ${{ steps.resolve.outputs.TF_DIR }}
+        run: terraform init -input=false
+
+      - name: (Optional) Validate
+        working-directory: ${{ steps.resolve.outputs.TF_DIR }}
+        run: terraform validate || true
+
+      # ---- PLAN (no var-file) ----
+      - name: Show Destroy Plan (no var-file, lock disabled)
+        if: ${{ github.event.inputs.var_file == '' }}
+        working-directory: ${{ steps.resolve.outputs.TF_DIR }}
+        run: terraform plan -destroy -input=false -no-color -lock=false
+
+      # ---- PLAN (with var-file) ----
+      - name: Show Destroy Plan (with var-file, lock disabled)
+        if: ${{ github.event.inputs.var_file != '' }}
+        working-directory: ${{ steps.resolve.outputs.TF_DIR }}
+        run: terraform plan -destroy -input=false -no-color -lock=false -var-file="${{ github.event.inputs.var_file }}"
+
+      # ---- DESTROY (no var-file) ----
+      - name: Terraform Destroy (no var-file, lock disabled)
+        if: ${{ github.event.inputs.var_file == '' }}
+        working-directory: ${{ steps.resolve.outputs.TF_DIR }}
+        run: terraform destroy -auto-approve -input=false -lock=false
+
+      # ---- DESTROY (with var-file) ----
+      - name: Terraform Destroy (with var-file, lock disabled)
+        if: ${{ github.event.inputs.var_file != '' }}
+        working-directory: ${{ steps.resolve.outputs.TF_DIR }}
+        run: terraform destroy -auto-approve -input=false -lock=false -var-file="${{ github.event.inputs.var_file }}"
