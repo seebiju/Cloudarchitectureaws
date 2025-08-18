@@ -1,0 +1,89 @@
+name: Terraform Destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "DESTROY" to confirm tearing down this environment'
+        required: true
+        type: string
+      directory:
+        description: 'Terraform working directory relative to repo root (e.g., ".", "infra")'
+        required: false
+        default: '.'
+        type: string
+      var_file:
+        description: 'Optional Terraform var-file path (e.g., env/prod.tfvars)'
+        required: false
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  destroy:
+    name: Terraform Destroy
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.confirm == 'DESTROY' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Resolve TF_DIR and validate
+        id: resolve
+        shell: bash
+        run: |
+          TF_DIR="${{ github.event.inputs.directory }}"
+          if [ -z "$TF_DIR" ] || [ "$TF_DIR" = "." ]; then
+            TF_DIR="$GITHUB_WORKSPACE"
+          else
+            TF_DIR="$GITHUB_WORKSPACE/$TF_DIR"
+          fi
+
+          echo "Using TF_DIR=$TF_DIR"
+          if [ ! -d "$TF_DIR" ]; then
+            echo "❌ Directory does not exist: $TF_DIR"
+            echo "::error ::Directory does not exist: $TF_DIR"
+            exit 1
+          fi
+
+          echo "TF_DIR=$TF_DIR" >> $GITHUB_OUTPUT
+          echo "Workspace listing:"
+          ls -la "$GITHUB_WORKSPACE"
+          echo "TF dir listing:"
+          ls -la "$TF_DIR"
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.2
+
+      - name: Terraform Init
+        working-directory: ${{ steps.resolve.outputs.TF_DIR }}
+        run: terraform init -input=false
+
+      - name: Show Destroy Plan
+        working-directory: ${{ steps.resolve.outputs.TF_DIR }}
+        run: |
+          if [ -n "${{ github.event.inputs.var_file }}" ]; then
+            terraform plan -destroy -input=false -no-color -var-file="${{ github.event.inputs.var_file }}"
+          else
+            terraform plan -destroy -input=false -no-color
+          fi
+
+      - name: Terraform Destroy
+        working-directory: ${{ steps.resolve.outputs.TF_DIR }}
+        run: |
+          if [ -n "${{ github.event.inputs.var_file }}" ]; then
+            terraform destroy -auto-approve -input=false -var-file="${{ github.event.inputs.var_file }}"
+          else
+            terraform destroy -auto-approve -input=false
+          fi
