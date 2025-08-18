@@ -1,0 +1,74 @@
+name: Terraform Destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "DESTROY" to confirm tearing down this environment'
+        required: true
+        type: string
+      directory:
+        description: 'Path to Terraform working directory (default: repo root)'
+        required: false
+        default: '.'
+        type: string
+      var_file:
+        description: 'Optional Terraform var-file (e.g., env/prod.tfvars)'
+        required: false
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: terraform-destroy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  destroy:
+    name: Terraform Destroy
+    runs-on: ubuntu-latest
+    # Require exact confirmation to proceed
+    if: ${{ github.event.inputs.confirm == 'DESTROY' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.2
+
+      - name: Terraform Init
+        working-directory: ${{ github.event.inputs.directory }}
+        run: terraform init -input=false
+
+      - name: (Optional) Validate
+        working-directory: ${{ github.event.inputs.directory }}
+        run: terraform validate || true
+
+      - name: Show Destroy Plan (for logs)
+        working-directory: ${{ github.event.inputs.directory }}
+        run: |
+          if [ -n "${{ github.event.inputs.var_file }}" ]; then
+            terraform plan -destroy -input=false -no-color -var-file="${{ github.event.inputs.var_file }}"
+          else
+            terraform plan -destroy -input=false -no-color
+          fi
+
+      - name: Terraform Destroy (Auto-approve)
+        working-directory: ${{ github.event.inputs.directory }}
+        run: |
+          if [ -n "${{ github.event.inputs.var_file }}" ]; then
+            terraform destroy -auto-approve -input=false -var-file="${{ github.event.inputs.var_file }}"
+          else
+            terraform destroy -auto-approve -input=false
+          fi
